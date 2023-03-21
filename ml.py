@@ -151,15 +151,11 @@ rounded_averageChronologicalDistance = []
 for value in averageChronologicalDistance:
     rounded_averageChronologicalDistance.append(round(value))
 
-# Create an x-axis that contains the average chronological distance between reviews
-x = [i for i in range(max(rounded_averageChronologicalDistance))]
-# Create a y-axis that contains the number of users that have a specific average chronological distance between reviews
-y = [rounded_averageChronologicalDistance.count(i) for i in range(max(rounded_averageChronologicalDistance))]
-# Plot the data as a bar plot
-plt.bar(x, y, color="lightgreen")
-# plt.bar(x, rounded_averageChronologicalDistance, color="lightgreen")
+# Create a histogram of the data
+plt.hist(rounded_averageChronologicalDistance, bins=max(rounded_averageChronologicalDistance)//10, color="lightgreen")
+# Set the x-axis label
 plt.xlabel("Μέσος χρόνος ανάμεσα στις αξιολογήσεις (σε μέρες)")
-# Label the y-axis
+# Set the y-axis label
 plt.ylabel("Πλήθος χρηστών")
 # Title the plot
 plt.title("Μέσος χρόνος ανάμεσα στις αξιολογήσεις (σε μέρες)")
