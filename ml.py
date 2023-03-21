@@ -1,7 +1,10 @@
 import csv
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 from datetime import datetime, timedelta
+
+#TODO THE MOVIE NAMES ARE STORED LIKE THE FILENAME.CSV - REMOVE THE .CSV
 
 def check_for_duplicates(array):
     if len(array) != len(set(array)):
@@ -18,10 +21,12 @@ def check_for_duplicates(array):
 # ----------------------------------------------------
 
 folder = 'moviesReviews'
+#* Users
 U = []
 UReviews = []
-I = 0
-folder = 'moviesReviews'
+#* Movies
+I = []
+TotalMovieCount = 0
 
 
 # ----------------------------------------------------
@@ -30,13 +35,13 @@ folder = 'moviesReviews'
 #
 # ----------------------------------------------------
 
-I = len([f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))])
+TotalMovieCount = len([f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))])
 
 
 
 # ----------------------------------------------------
 #
-#* Load all the users (use maxMoviesToRead for fast testing)
+#* Load all the users (use maxMoviesToRead for fast testing) + their reviews
 #
 # ----------------------------------------------------
 
@@ -45,6 +50,8 @@ counter = 0
 maxMoviesToRead = 40
 for filename in os.listdir(folder):
     if filename.endswith(".csv"):
+        # Store the movie title in an array
+        I.append(filename)
         with open(os.path.join(folder, filename), 'r', encoding='UTF-8') as file:
             reader = csv.reader(file)
             for row in reader:
@@ -56,21 +63,23 @@ for filename in os.listdir(folder):
                         U.append(username)
                         # Initialize the users reviews
                         UReviews.append([])
+                        # Store the movie title in the beggining of the row 
+                        row.insert(0, filename)
                         # Add the row to the users reviews
                         UReviews[len(UReviews) - 1].append(row)
                     # It is not the first time spotting the user
                     else:
-                        # print("USER SPOTTED AGAIN" + username)
                         #Get the index of the user
                         userIndex = U.index(username)
+                        # Store the movie title in the beggining of the row 
+                        row.insert(0, filename)
                         #add the row to the specific users UReviews list
                         UReviews[userIndex].append(row)
         counter += 1
         print("Files completed: " + str(counter) + "/" + str(maxMoviesToRead))
         if counter == maxMoviesToRead:
             break
-
-
+        
 
 # ----------------------------------------------------
 #
@@ -136,7 +145,7 @@ for index, user in enumerate(usersThatFit):
     # for each review in the usersThatFitReviews array, store the date in the dates array and calculate the average chronological distance between the reviews
     userDates = []
     for index2, review in enumerate(usersThatFitReviews[index]):
-        userDates.append(datetime.strptime(review[4], "%d %B %Y"))
+        userDates.append(datetime.strptime(review[5], "%d %B %Y"))
     # Calculate the average chronological distance between the reviews
     averageChronologicalDistance[index] = 0
     # Sort the userDates array so that the dates are in chronological order
@@ -159,5 +168,39 @@ plt.xlabel("Μέσος χρόνος ανάμεσα στις αξιολογήσε
 plt.ylabel("Πλήθος χρηστών")
 # Title the plot
 plt.title("Μέσος χρόνος ανάμεσα στις αξιολογήσεις (σε μέρες)")
+# Show the plot
+plt.show()
+
+
+# ----------------------------------------------------
+#
+#* Create the set of preference vectors R, where each row corresponds to a user and each column corresponds to a movie. 
+#* If a user has rated a movie, the corresponding entry in the preference vector is the rating. Otherwise, the 
+#* corresponding entry is 0.
+#
+# ----------------------------------------------------
+
+R = np.zeros((len(U), len(I)))
+
+for j in range(len(U)):
+    for k in range(len(I)):
+        # Check in all the reviews of the user if he has rated the movie
+        for review in UReviews[j]:
+            if review[0] == I[k] and review[2] is not None and review[2] != "Null":
+                # review[2] is the rating of the movie
+                R[j, k] = review[2]
+                break
+            else:
+                R[j, k] = 0
+                
+# Create the heatmap
+plt.imshow(R, cmap='viridis', aspect=len(I)/len(U))
+# Set the x-axis and y-axis labels
+plt.xlabel('Ταινίες')
+plt.ylabel('Χρήστες')
+# Show the colorbar
+plt.colorbar()
+# Title the plot
+plt.title("Αναπαράσταση δεδομένων ως heatmap του συνόλου R (Διανύσματα Προτιμήσεων)")	
 # Show the plot
 plt.show()
