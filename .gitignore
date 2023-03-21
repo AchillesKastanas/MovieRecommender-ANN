@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Folders
+moviesPerGenre/
+moviesReviews/
+
 # C extensions
 *.so
 
