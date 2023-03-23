@@ -3,6 +3,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
+from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances
+from scipy.spatial.distance import euclidean, cosine
 
 #TODO THE MOVIE NAMES ARE STORED LIKE THE FILENAME.CSV - REMOVE THE .CSV
 
@@ -12,6 +15,19 @@ def check_for_duplicates(array):
     else:
         print("There are no duplicates in the array.")
         
+def dist_euclidean(u, v):
+    mask = np.logical_and(u != 0, v != 0)
+    return euclidean(u[mask], v[mask])
+
+def dist_cosine(u, v):
+    mask = np.logical_and(u != 0, v != 0)
+    return cosine(u[mask], v[mask])
+
+def kmeans_clustering(R, n_clusters, distance_func):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    dist_matrix = pairwise_distances(R, metric=distance_func)
+    kmeans.fit(dist_matrix)
+    return kmeans
         
 
 # ----------------------------------------------------
@@ -204,3 +220,24 @@ plt.colorbar()
 plt.title("Αναπαράσταση δεδομένων ως heatmap του συνόλου R (Διανύσματα Προτιμήσεων)")	
 # Show the plot
 plt.show()
+
+# Set the number of clusters
+L_values = [2, 4, 6, 8, 10]
+
+# Perform clustering using k-means with Euclidean distance
+for L in L_values:
+    kmeans_euclidean = kmeans_clustering(R, L, dist_euclidean)
+    labels_euclidean = kmeans_euclidean.labels_
+    # Plot the clusters
+    plt.scatter(R[:, 0], R[:, 1], c=labels_euclidean, cmap='viridis', marker='.')
+    plt.title(f'K-means clustering with Euclidean distance (L = {L})')
+    plt.show()
+
+# Perform clustering using k-means with Cosine distance
+for L in L_values:
+    kmeans_cosine = kmeans_clustering(R, L, dist_cosine)
+    labels_cosine = kmeans_cosine.labels_
+    # Plot the clusters
+    plt.scatter(R[:, 0], R[:, 1], c=labels_cosine, cmap='viridis', marker='.')
+    plt.title(f'K-means clustering with Cosine distance (L = {L})')
+    plt.show()
