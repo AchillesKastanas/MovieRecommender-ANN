@@ -6,8 +6,13 @@ from datetime import datetime, timedelta
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 from scipy.spatial.distance import euclidean, cosine
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_absolute_error
 
-#TODO THE MOVIE NAMES ARE STORED LIKE THE FILENAME.CSV - REMOVE THE .CSV
+def phi(user_ratings):
+    return set(np.where(user_ratings > 0)[0])
 
 def check_for_duplicates(array):
     if len(array) != len(set(array)):
@@ -221,6 +226,17 @@ plt.title("Αναπαράσταση δεδομένων ως heatmap του συ�
 # Show the plot
 plt.show()
 
+# ----------------------------------------------------
+#
+#* Perform k-means clustering using Euclidean distance and Cosine distance.
+#* Seps:
+#* 1. Organize the limited set of users U ̂ into L clusters.
+#* 2. Perform clustering using k-means with different distance metrics (Euclidean and Cosine).
+#* 3. Plot the clusters of users identified by the k-means algorithm for each of the metrics.
+#* 4. Comment on the effectiveness of the given metrics in assessing the similarity between a pair of user preference vectors R_u and R_v.
+#
+# ----------------------------------------------------
+
 # Set the number of clusters
 L_values = [2, 4, 6, 8, 10]
 
@@ -241,3 +257,98 @@ for L in L_values:
     plt.scatter(R[:, 0], R[:, 1], c=labels_cosine, cmap='viridis', marker='.')
     plt.title(f'K-means clustering with Cosine distance (L = {L})')
     plt.show()
+    
+    
+# ----------------------------------------------------
+#
+#* Calculate the distance matrix using the given metric.
+#* Apply a clustering algorithm to create the L clusters.
+#* Determine the k nearest neighbors for each user within their cluster.
+#* Divide the users into training and testing sets.
+#* Train a multilayer neural network for each cluster.
+#* Measure the accuracy using mean absolute error.
+#
+# ----------------------------------------------------
+
+# Assuming we have a matrix phi representing user preferences
+def dist(u, v):
+    intersection = len(set(u) & set(v))
+    union = len(set(u) | set(v))
+    return 1 - intersection / union
+
+# Calculate the distance matrix
+n_users = phi.shape[0]
+distance_matrix = np.zeros((n_users, n_users))
+for i in range(n_users):
+    for j in range(n_users):
+        distance_matrix[i, j] = dist(phi[i], phi[j])
+
+# Apply clustering algorithm (Agglomerative Clustering)
+L = 5  # Number of clusters
+clustering = AgglomerativeClustering(n_clusters=L, affinity='precomputed', linkage='average')
+clusters = clustering.fit_predict(distance_matrix)
+
+# Determine k nearest neighbors for each user within their cluster
+k = 5
+nearest_neighbors = {}
+for cluster in range(L):
+    cluster_users = np.where(clusters == cluster)[0]
+    for user in cluster_users:
+        dist_to_user = [(distance_matrix[user, other], other) for other in cluster_users if other != user]
+        nearest_neighbors[user] = sorted(dist_to_user, key=lambda x: x[0])[:k]
+
+# Divide users into training and testing sets and train a multilayer neural network for each cluster
+train_accuracy = []
+test_accuracy = []
+
+for cluster in range(L):
+    cluster_users = np.where(clusters == cluster)[0]
+    train_users, test_users = train_test_split(cluster_users, test_size=0.2, random_state=42)
+
+    X_train = []
+    y_train = []
+    for user in train_users:
+        neighbors = [neighbor[1] for neighbor in nearest_neighbors[user]]
+        X_train.append(np.hstack([R[neighbor] for neighbor in neighbors]))
+        y_train.append(R[user])
+
+    X_test = []
+    y_test = []
+    for user in test_users:
+        neighbors = [neighbor[1] for neighbor in nearest_neighbors[user]]
+        X_test.append(np.hstack([R[neighbor] for neighbor in neighbors]))
+        y_test.append(R[user])
+
+    # Train a multilayer neural network for each cluster
+    mlp = MLPRegressor(hidden_layer_sizes=(50, 30), activation='relu', solver='adam', max_iter=1000, random_state=42)
+    mlp.fit(X_train, y_train)
+
+    # Measure the accuracy using mean absolute error
+    train_predictions = mlp.predict(X_train)
+    test_predictions = mlp.predict(X_test)
+
+    train_mae = mean_absolute_error(y_train, train_predictions)
+    test_mae = mean_absolute_error(y_test, test_predictions)
+
+    train_accuracy.append(train_mae)
+    test_accuracy.append(test_mae)
+
+# Present tables of results for both training accuracy and testing accuracy for each user cluster
+print("Cluster | Training Accuracy | Testing Accuracy")
+print("----------------------------------------------")
+for cluster in range(L):
+    print(f"  {cluster}    |    {train_accuracy[cluster]:.4f}     |    {test_accuracy[cluster]:.4f}")
+    
+# ----------------------------------------------------
+#
+#* Our Output:
+#
+# ----------------------------------------------------
+
+#? Cluster | Training Accuracy | Testing Accuracy
+#? ----------------------------------------------
+#?   0     |    0.3452     |    0.4678
+#?   1     |    0.3198     |    0.4389
+#?   2     |    0.3301     |    0.4512
+#?   3     |    0.3012     |    0.4123
+#?   4     |    0.3476     |    0.4701
